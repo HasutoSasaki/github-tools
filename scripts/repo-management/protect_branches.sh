@@ -89,12 +89,13 @@ for repo in $repos; do
         mutation($branchProtectionRuleId:ID!) {
           updateBranchProtectionRule(input: {
             branchProtectionRuleId: $branchProtectionRuleId
-            requiresApprovingReviews: true
-            requiredApprovingReviewCount: 1
+            requiresApprovingReviews: false   # PRの承認要件を無効化
             dismissesStaleReviews: true
             isAdminEnforced: false
             requiresStatusChecks: true
             requiresStrictStatusChecks: true
+            restrictsPushes: true             # プッシュ制限を有効化
+            blocksCreations: false
           }) { clientMutationId }
         }
         ' -f branchProtectionRuleId="$branchProtectionRuleId" 2>/dev/null
