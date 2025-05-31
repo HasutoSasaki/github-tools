@@ -8,7 +8,7 @@ GitHub Tools is an open-source collection of scripts and utilities designed to s
 
 ## 🧰 Features
 
-- **🔒 Repository Protection**: Automatically apply branch protection rules across all your repositories
+- **🔒 Repository Protection**: Automatically apply branch protection rules across all your repositories (prevents direct pushes but allows PRs without approval)
 - **More tools coming soon!**
 
 ## 📋 Requirements
@@ -33,7 +33,7 @@ nano .env  # Edit with your preferred text editor
 
 ### 🔒 Branch Protection Script
 
-Automatically applies branch protection rules to all repositories owned by a specified GitHub user.
+Automatically applies branch protection rules to all public repositories owned by a specified GitHub user. The script prevents direct pushes to protected branches but allows PRs to be merged without requiring approvals, making it ideal for solo developers.
 
 ```bash
 # Run with environment variables from .env file
@@ -43,6 +43,8 @@ cd scripts/repo-management
 # Or run with environment variables specified inline
 GITHUB_USERNAME=yourusername ./protect_branches.sh
 ```
+
+> **Note**: Due to GitHub's limitations, branch protection rules are only applied to public repositories unless you have a GitHub Team or Enterprise plan.
 
 ## 🔑 Environment Configuration
 

@@ -51,15 +51,59 @@ for repo in $repos; do
     # ブランチが存在するか確認（APIエラーを回避するため）
     branch_exists=$(gh api repos/$USER/$repo/branches/$branch --silent || echo "not_exists")
     
-    if [ "$branch_exists" != "not_exists" ]; then
-      # ブランチ保護ルールを設定
-      gh api -X PUT \
-        /repos/$USER/$repo/branches/$branch/protection \
-        -f required_pull_request_reviews.required_approving_review_count=1 \
-        -f required_pull_request_reviews.dismiss_stale_reviews=true \
-        -f enforce_admins=false
+   if [ "$branch_exists" != "not_exists" ]; then
+      # リポジトリIDの取得
+      repositoryId=$(gh api graphql -f query='
+      {
+      repository(owner:"'$USER'", name:"'$repo'"){id}
+      }
+      ' -q '.data.repository.id')
+
+      # 保護ルールを作成
+      gh api graphql -f query='
+      mutation($repositoryId:ID!,$branch:String!) {
+        createBranchProtectionRule(input: {
+          repositoryId: $repositoryId
+          pattern: $branch
+        }) { clientMutationId }
+      }
+      ' -f repositoryId="$repositoryId" -f branch="$branch" 2>/dev/null || true
       
-      echo "✅ $repo の $branch ブランチを保護しました"
+      # 保護ルールIDを取得
+      branchProtectionRuleId=$(gh api graphql -f query='
+      {
+        repository(owner:"'$USER'", name:"'$repo'"){
+          branchProtectionRules(first:100){
+            nodes{
+              id,
+              pattern
+            }
+          }
+        }
+      }
+      ' -q ' .data.repository.branchProtectionRules.nodes.[] | select(.pattern=="'$branch'") | .id ')
+      
+      # 保護ルールを更新
+      if [ -n "$branchProtectionRuleId" ]; then
+        gh api graphql -f query='
+        mutation($branchProtectionRuleId:ID!) {
+          updateBranchProtectionRule(input: {
+            branchProtectionRuleId: $branchProtectionRuleId
+            requiresApprovingReviews: false   # PRの承認要件を無効化
+            dismissesStaleReviews: true
+            isAdminEnforced: false
+            requiresStatusChecks: true
+            requiresStrictStatusChecks: true
+            restrictsPushes: true             # プッシュ制限を有効化
+            blocksCreations: false
+          }) { clientMutationId }
+        }
+        ' -f branchProtectionRuleId="$branchProtectionRuleId" 2>/dev/null
+        
+        echo "✅ $repo の $branch ブランチを保護しました"
+      else
+        echo "⚠️ $repo の $branch ブランチの保護ルールIDを取得できませんでした"
+      fi
     else
       echo "⚠️ $repo に $branch ブランチが存在しないためスキップします"
     fi
